@@ -117,6 +117,11 @@ resource "aws_codepipeline" "cicd_pipeline" {
         FullRepositoryId = "mjmaix/demo-aws-codepipeline-terraform"
         BranchName       = "main"
       }
+
+      source {
+        type      = "CODEPIPELINE"
+        buildspec = file("buildspec/source-buildspec.yml")
+      }
     }
   }
 
