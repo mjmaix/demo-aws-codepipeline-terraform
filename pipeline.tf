@@ -1,4 +1,3 @@
-
 resource "aws_codebuild_project" "tf-plan" {
   name          = "tf-cicd-plan"
   description   = "Plan stage for terraform"
@@ -7,11 +6,6 @@ resource "aws_codebuild_project" "tf-plan" {
 
   artifacts {
     type = "CODEPIPELINE"
-  }
-
-  cache {
-    type     = "S3"
-    location = aws_s3_bucket.codepipeline_artifacts.bucket
   }
 
   environment {
@@ -41,10 +35,7 @@ resource "aws_codebuild_project" "tf-plan" {
     type      = "CODEPIPELINE"
     buildspec = file("buildspec/plan-buildspec.yml")
   }
-
-  source_version = "master"
 }
-
 
 resource "aws_codebuild_project" "tf-apply" {
   name          = "tf-cicd-apply"
@@ -54,11 +45,6 @@ resource "aws_codebuild_project" "tf-apply" {
 
   artifacts {
     type = "CODEPIPELINE"
-  }
-
-  cache {
-    type     = "S3"
-    location = aws_s3_bucket.codepipeline_artifacts.bucket
   }
 
   environment {
@@ -83,13 +69,10 @@ resource "aws_codebuild_project" "tf-apply" {
       location = "${aws_s3_bucket.codepipeline_artifacts.id}/build-log"
     }
   }
-
   source {
     type      = "CODEPIPELINE"
     buildspec = file("buildspec/apply-buildspec.yml")
   }
-
-  source_version = "master"
 }
 
 resource "aws_codepipeline" "cicd_pipeline" {
@@ -103,7 +86,6 @@ resource "aws_codepipeline" "cicd_pipeline" {
 
   stage {
     name = "Source"
-
     action {
       name             = "Source"
       category         = "Source"
@@ -113,14 +95,10 @@ resource "aws_codepipeline" "cicd_pipeline" {
       output_artifacts = ["tf-code"]
 
       configuration = {
-        ConnectionArn    = var.codestar_connector_credentials
-        FullRepositoryId = "mjmaix/demo-aws-codepipeline-terraform"
-        BranchName       = "main"
-      }
-
-      source {
-        type      = "CODEPIPELINE"
-        buildspec = file("buildspec/source-buildspec.yml")
+        ConnectionArn        = var.codestar_connector_credentials
+        FullRepositoryId     = "mjmaix/demo-aws-codepipeline-terraform"
+        BranchName           = "main"
+        OutputArtifactFormat = "CODE_ZIP"
       }
     }
   }
@@ -135,14 +113,13 @@ resource "aws_codepipeline" "cicd_pipeline" {
       owner           = "AWS"
       input_artifacts = ["tf-code"]
       configuration = {
-        "ProjectName" = "tf-cicd-plan"
+        ProjectName = "tf-cicd-plan"
       }
     }
   }
 
   stage {
     name = "Deploy"
-
     action {
       name            = "Deploy"
       category        = "Build"
@@ -150,10 +127,10 @@ resource "aws_codepipeline" "cicd_pipeline" {
       version         = "1"
       owner           = "AWS"
       input_artifacts = ["tf-code"]
-
       configuration = {
-        ProjectName = "tf-cicd-plan"
+        ProjectName = "tf-cicd-apply"
       }
     }
   }
+
 }
